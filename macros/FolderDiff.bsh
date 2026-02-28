@@ -1,0 +1,87 @@
+import java.text.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.math.BigInteger;
+
+SimpleDateFormat dateFormatter = new SimpleDateFormat("MMM dd, yy HH:mm ");
+
+public boolean ignoreFile(File file) {
+	boolean ignore = false;
+	String fileName = file.getName();
+
+	// add stuff here to ignore more files/folders
+	if(fileName.equals("CVS") || fileName.equals(".DS_Store")) {
+		ignore = true;
+	}
+
+	return ignore;
+}
+
+public String printDirectoryContents(StringBuffer tabBuffer, File directory) {
+	
+	boolean compareMD5Sum = true;
+
+	// set to true to show contents of sub folders too
+	boolean recursive = true;
+
+	StringBuffer directories = new StringBuffer();
+	StringBuffer files = new StringBuffer();
+	File[] fileArray = directory.listFiles();
+	for(File file : fileArray) {
+		if(!ignoreFile(file)) {
+			if(file.isDirectory()) {
+				directories.append(tabBuffer);
+				directories.append(file.getName());
+				directories.append("\n");
+				if(recursive) {
+					StringBuffer newTabBuffer = new StringBuffer(tabBuffer);
+					newTabBuffer.append("\t");
+					directories.append(printDirectoryContents(newTabBuffer, file));
+				}
+			} else {
+				files.append(tabBuffer);
+				if (compareMD5Sum) {
+					byte[] data = Files.readAllBytes(file.toPath());
+					byte[] hash = MessageDigest.getInstance("MD5").digest(data);
+					String checksum = new BigInteger(1, hash).toString(16);
+					files.append(checksum + "     " + file.getName());
+					files.append("\n");
+				} else {
+					files.append(file.getName());
+					files.append("\n");
+				}
+			}
+		}
+	}
+	directories.append(files);
+	return directories.toString();
+}
+String tempFileBasePath = jEdit.getSettingsDirectory() + "/dirdiff/";
+File directory1 = null;
+File directory2 = null;
+JFileChooser fileChooser = new JFileChooser(buffer.getDirectory());
+fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+fileChooser.setDialogTitle("Choose First Directory");
+int returnValue = fileChooser.showOpenDialog(view);
+if(returnValue == JFileChooser.APPROVE_OPTION) {
+	directory1 = fileChooser.getSelectedFile();
+	fileChooser.setDialogTitle("Choose Second Directory");
+	returnValue = fileChooser.showOpenDialog(view);
+	if(returnValue == JFileChooser.APPROVE_OPTION) {
+		directory2 = fileChooser.getSelectedFile();
+	}
+}
+Buffer file1Buffer = jEdit.openFile(view, tempFileBasePath + "directory1");
+Buffer file2Buffer = jEdit.openFile(view, tempFileBasePath + "directory2");
+file2Buffer.insert(0, printDirectoryContents(new StringBuffer(), directory2));
+file2Buffer.insert(0, directory2.getPath() + "\n\n");
+file1Buffer.insert(0, printDirectoryContents(new StringBuffer(), directory1));
+file1Buffer.insert(0, directory1.getPath() + "\n\n");
+view.goToBuffer(file1Buffer);
+view.splitVertically();
+view.goToBuffer(file2Buffer);
+EditPlugin sqlPlugin = jEdit.getPlugin("jdiff.JDiffPlugin", true);
+PluginJAR sqlPluginJar = sqlPlugin.getPluginJAR();
+ActionSet sqlPluginActionSet = sqlPluginJar.getActionSet();
+sqlPluginActionSet.getAction("toggle-dual-diff").invoke(view);
