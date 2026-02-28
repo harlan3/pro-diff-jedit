@@ -3,15 +3,12 @@ import java.io.File;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.math.BigInteger;
-
-SimpleDateFormat dateFormatter = new SimpleDateFormat("MMM dd, yy HH:mm ");
-
 public boolean ignoreFile(File file) {
 	boolean ignore = false;
 	String fileName = file.getName();
 
 	// add stuff here to ignore more files/folders
-	if(fileName.equals("CVS") || fileName.equals(".DS_Store")) {
+	if(fileName.equals(".git") || fileName.equals(".svn") || fileName.equals("CVS") || fileName.equals(".cvs")) {
 		ignore = true;
 	}
 
@@ -20,6 +17,7 @@ public boolean ignoreFile(File file) {
 
 public String printDirectoryContents(StringBuffer tabBuffer, File directory) {
 	
+	// set to true to perform md5 checksum on each file
 	boolean compareMD5Sum = true;
 
 	// set to true to show contents of sub folders too
